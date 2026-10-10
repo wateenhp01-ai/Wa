@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Queen Wateen</title>
+<style>
+  html, body { margin:0; height:100%; background:#05060d; color:#fff; overflow:hidden;
+    font-family:-apple-system, "Segoe UI", Tahoma, Arial, sans-serif; }
+  canvas#c { position:fixed; inset:0; width:100vw; height:100vh; object-fit:contain; }
+  video#v { position:fixed; left:12px; top:calc(env(safe-area-inset-top, 0px) + 12px);
+    width:130px; border-radius:12px; transform:scaleX(-1); opacity:.9; display:none;
+    border:2px solid rgba(255,255,255,.35); }
+  #hud { position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom, 0px) + 14px);
+    text-align:center; font-size:17px; color:#cfd3ff; text-shadow:0 1px 6px #000; padding:0 16px; }
+  #overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:18px; padding:24px; text-align:center;
+    background:radial-gradient(circle at 50% 40%, #1a1440, #05060d 70%); }
+  #overlay h1 { margin:0; font-size:30px; }
+  #overlay p { margin:0; line-height:1.9; color:#cfd3ff; font-size:18px; }
+  button { font:inherit; font-size:20px; padding:14px 34px; border:0; border-radius:999px;
+    background:linear-gradient(135deg,#ff7ac8,#ffd34d); color:#1b1030; font-weight:700; }
+  #err { color:#ff9aa8; font-size:16px; line-height:1.8; max-width:520px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<video id="v" playsinline muted autoplay></video>
+<div id="hud"></div>
+
+<div id="overlay">
+  <h1>✨ Queen Wateen ✨</h1>
+  <p>👆 إصبع واحد: الاسم<br>✌️ إصبعين: قلب<br>🖐️ يد مفتوحة: تاج<br>✊ قبضة: جزيئات</p>
+  <button id="start">ابدأ الكاميرا</button>
+  <div id="err"></div>
+</div>
+
+<script>
+const W = 640, H = 480, S = 1.5, N = 4000;
+const NAME = "queen wateen";           // غيّري الاسم من هنا
+const cvs = document.getElementById('c');
+cvs.width = W * S; cvs.height = H * S;
+const ctx = cvs.getContext('2d');
+const video = document.getElementById('v');
+const hud = document.getElementById('hud');
+const overlay = document.getElementById('overlay');
+const errBox = document.getElementById('err');
+
+// ---------- أداة: تحويل رسمة إلى نقاط ----------
+const off = document.createElement('canvas');
+off.width = W; off.height = H;
+const octx = off.getContext('2d', { willReadFrequently: true });
+
+function pointsFromCanvas() {
+  const d = octx.getImageData(0, 0, W, H).data;
+  const xs = [], ys = [];
+  for (let i = 3, p = 0; i < d.length; i += 4, p++) {
+    if (d[i] > 128) { xs.push(p % W); ys.push(Math.floor(p / W)); }
+  }
+  const tx = new Float32Array(N), ty = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const k = Math.floor(Math.random() * xs.length);
+    tx[i] = xs[k] * S; ty[i] = ys[k] * S;
+  }
+  return { tx, ty };
+}
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+// ---------- الأشكال ----------
+function scatterShape() {
+  const tx = new Float32Array(N), ty = new Float32Array(N);
+  for (let i = 0; i < N; i++) { tx[i] = rnd(0, W * S); ty[i] = rnd(0, H * S); }
+  return { tx, ty };
+}
+
+function textShape() {
+  octx.clearRect(0, 0, W, H);
+  octx.fillStyle = '#fff';
+  octx.textAlign = 'center'; octx.textBaseline = 'middle';
+  let size = 120;
+  octx.font = `bold ${size}px "Helvetica Neue", Arial, sans-serif`;
+  const w = octx.measureText(NAME).width;
+  if (w > 560) size = Math.floor(size * 560 / w);
+  octx.font =dth=device-width, initial-scale=1, viewport-fit=cover"
+  octx.fillText(NAME, W / 2, H / 2);
+  return pointsFromCanvas();
+}
+
+function heartShape() {
+  const tx = new Float32Array(N), ty = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const t = rnd(0, 2 * Math.PI);
+    const r = 0.75 + 0.25 * Math.sqrt(Math.random());
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+    tx[i] = (W / 2 + x * 11 * r) * S;
+    ty[i] = (H / 2 + 10 + y * 11 * r) * S;
+  }
+  return { tx, ty };
+}
+
+function crownShape() {
+  octx.
+clearRect(0, 0, W, H);
+  octx.globalCompositeOperation = 'source-over';
+  octx.fillStyle = '#fff';
+  const cx = W / 2;
+  const body = [[cx-150,380],[cx-150,170],[cx-75,265],[cx,130],[cx+75,265],[cx+150,170],[cx+150,380]];
+  octx.beginPath();
+  body.forEach(([x, y], i) => i ? octx.lineTo(x, y) : octx.moveTo(x, y));
+  octx.closePath(); octx.fill();
+  [[cx-150,160],[cx,120],[cx+150,160]].forEach(([x, y]) => {
+    octx.beginPath(); octx.arc(x, y, 16, 0, 2 * Math.PI); octx.fill();
+  });
+  octx.globalCompositeOperation = 'destination-out';
+  octx.lineWidth = 6;
+  octx.beginPath(); octx.moveTo(cx-150, 320); octx.lineTo(cx+150, 320); octx.stroke();
+  [-100,-50,0,50,100].forEach(x => {
+    octx.beginPath(); octx.arc(cx + x, 350, 11, 0, 2 * Math.PI); octx.fill();
+  });
+  octx.globalCompositeOperation = 'source-over';
+  return pointsFromCanvas();
+}
+
+// اللون RGB
+const SHAPES = {
+  scatter: { make: scatterShape, color: [90, 130, 255] },
+  text:    { make: textShape,    color: [255, 150, 215] },
+  heart:   { make: heartShape,   color: [255, 60, 90] },
+  crown:   { make: crownShape,   color: [255, 215, 0] },
+};
+// عدد الأصابع -> الشكل
+const GESTURE = { 0: 'scatter', 1: 'text', 2: 'heart', 5: 'crown' };
+const LABEL = { scatter: 'جزيئات', text: NAME, heart: 'قلب ❤️', crown: 'تاج 👑' };
+
+// ---------- الجزيئات ----------
+let shape = 'scatter';
+let target = SHAPES[shape].make();
+let px = new Float32Array(N), py = new Float32Array(N);
+for (let i = 0; i < N; i++) { px[i] = rnd(0, W * S); py[i] = rnd(0, H * S); }
+let cur = SHAPES[shape].color.slice();
+
+function setShape(name) {
+  if (name === shape) return;
+  shape = name;
+  target = SHAPES[name].make();
+  hud.textContent = LABEL[name];
+}
+
+function frame() {
+  const tc = SHAPES[shape].color;
+  for (let k = 0; k < 3; k++) cur[k] += (tc[k] - cur[k]) * 0.08;
+  ctx.fillStyle = 'rgba(5,6,13,0.45)';
+  ctx.fillRect(0, 0, cvs.width, cvs.height);
+  ctx.fillStyle =(0, 0, W, H).data;
+  const xs = [], ys = [];
+  for
+  const tx = target.tx, ty = target.ty;
+  for (let i = 0; i < N; i++) {
+    px[i] += (tx[i] - px[i]) * 0.08 + (Math.random() - 0.5) * 1.4;
+    py[i] += (ty[i] - py[i]) * 0.08 + (Math.random() - 0.5) * 1.4;
+    ctx.fillRect(px[i], py[i], 2.6, 2.6);
+  }
+  detect();
+  requestAnimationFrame(frame);
+}
+
+// ---------- تتبع اليد ----------
+const TIPS = [8, 12, 16, 20], PIPS = [6, 10, 14, 18];
+function countFingers(lm) {
+  let up = 0;
+  for (let i = 0; i < 4; i++) if (lm[TIPS[i]].y < lm[PIPS[i]].y) up++;
+  const d = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
+  if (d(4, 17) > d(3, 17)) up++;     // الإبهام
+  return up;
+}
+
+let landmarker = null, lastT = -1, lastCount = -1, stable = 0;
+function detect() {
+  if (!landmarkerttom, 0px) + 14px);
+    textvideo.currentTime === lastT) return;
+  lastT = video.currentTime;
+  let res;
+  try { res = landmarker.detectForVideo(video, performance.now()); } catch (e) { return; }
+  if (res.landmarks && res.landmarks.length) {
+    const c = countFingers(res.landmarks[0]);
+    stable = (c === lastCount) ? stable + 1 : 0;
+    lastCount = c;
+    if (stable >= 4 && GESTURE[c]) setShape(GESTURE[c]);
+    if (!GESTURE[c]) hud.textContent =ject-fit:contai
+  }
+}
+
+async function start() {
+  errBox.textContent = '';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    errBox.textContent = 'الكاميرا ما تشتغل من هنا. لازم الصفحة تنفتح من رابط https (مو من ملف محفوظ).';
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia(
+      { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+  } catch (e) {
+    errBox.textContent = 'ما قدرت أفتح الكاميرا. تأكدي إنك سمحتي للمتصفح باستخدامها (الإعدادات ← سفاري ← الكاميرا).';
+    return;
+  }
+  overlay.style.display = 'none';
+  video.style.display = 'block';
+  hud.textContent = 'جاري تحميل نموذج اليد…';
+  try {
+    const base = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+    const vision = await import(base + '/vision_bundle.mjs');
+    const files = await vision.FilesetResolver.forVisionTasks(base + '/wasm');
+    const opts = (delegate) => ({
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+        delegate },
+      runningMode: 'VIDEO', numHands: 1,
+      minHandDetectionConfidence: 0.6, minTrackingConfidence: 0.6,
+    });
+    try { landmarker = await vision.HandLandmarker.createFromOptions(files, opts('GPU')); }
+    catch (e) { landmarker = await vision.HandLandmarker.createFromOptions(files, opts('CPU')); }
+    hud.textContent = 'ارفعي يدك قدام الكاميرا ✋';
+  } catch (e) {
+    hud.textContent = 'تعذّر تحميل نموذج اليد. تأكدي من الإنترنت وجرّبي من جديد.';
+  }
+}
+
+document.getElementById('start').addEventListener('click', start);
+
+// وضع التجربة بدون كاميرا: افتحي الصفحة بـ ?demo=text أو heart أو crown
+const demo = new URLSearchParams(location.search).get('demo');
+if (demo && SHAPES[demo]) {
+  overlay.style.display = 'none';
+  shape = demo; target = SHAPES[demo].make(); cur = SHAPES[demo].color.slice();
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
